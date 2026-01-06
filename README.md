@@ -1,2 +1,0 @@
-# buscadorwp
-Buscador WP
