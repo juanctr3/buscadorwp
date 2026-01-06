@@ -8,7 +8,7 @@ class ASP_Search {
         add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_assets' ) );
         add_action( 'wp_ajax_asp_fetch_results', array( $this, 'ajax_fetch_results' ) );
         add_action( 'wp_ajax_nopriv_asp_fetch_results', array( $this, 'ajax_fetch_results' ) );
-        add_action( 'wp_head', array( $this, 'print_sticky_styles' ) ); // Mantiene funcionalidad sticky
+        add_action( 'wp_head', array( $this, 'print_sticky_styles' ) ); 
     }
 
     public function enqueue_assets() {
@@ -44,7 +44,10 @@ class ASP_Search {
         check_ajax_referer( 'asp_search_nonce', 'security' );
 
         $term = sanitize_text_field( $_POST['term'] );
-        $excluded_ids = array_map( 'intval', explode( ',', get_option( 'asp_excluded_ids', '' ) ) );
+        
+        // MODIFICACIÓN: Ahora obtenemos el array directamente. 
+        // Si no existe, devuelve un array vacío.
+        $excluded_ids = get_option( 'asp_excluded_ids', array() );
 
         // 1. Log Stats
         $this->log_search_stats( $term );
@@ -55,7 +58,7 @@ class ASP_Search {
             'post_status'    => 'publish',
             's'              => $term,
             'posts_per_page' => 5,
-            'post__not_in'   => $excluded_ids
+            'post__not_in'   => $excluded_ids // Aquí pasamos el array de IDs a excluir
         );
 
         $query = new WP_Query( $args );
@@ -65,10 +68,13 @@ class ASP_Search {
             while ( $query->have_posts() ) {
                 $query->the_post();
                 $thumb = get_the_post_thumbnail_url( get_the_ID(), 'thumbnail' );
+                // Si no hay imagen, usamos un placeholder genérico
+                $default_img = 'data:image/svg+xml;base64,' . base64_encode('<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>');
+                
                 $results[] = array(
                     'title' => get_the_title(),
                     'link'  => get_the_permalink(),
-                    'image' => $thumb ? $thumb : ASP_URL . 'assets/css/default-icon.png' // Fallback image logic
+                    'image' => $thumb ? $thumb : $default_img
                 );
             }
             wp_reset_postdata();
@@ -82,9 +88,8 @@ class ASP_Search {
         $table_name = $wpdb->prefix . 'asp_search_stats';
         $term = strtolower( trim( $term ) );
         
-        if ( strlen( $term ) < 3 ) return; // No guardar busquedas muy cortas
+        if ( strlen( $term ) < 3 ) return; 
 
-        // Revisar si existe
         $exists = $wpdb->get_row( $wpdb->prepare( "SELECT id, hits FROM $table_name WHERE term = %s", $term ) );
 
         if ( $exists ) {
