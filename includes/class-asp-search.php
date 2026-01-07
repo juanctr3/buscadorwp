@@ -65,7 +65,6 @@ class ASP_Search {
 
     // --- 2. SHORTCODE: PÁGINA DE RESULTADOS ---
     public function render_results_list() {
-        // CAMBIO IMPORTANTE: Verificar 'asp_query' en lugar de 's'
         if ( ! isset( $_GET['asp_query'] ) || empty( $_GET['asp_query'] ) ) {
             return '<p class="asp-message">Introduce un término para buscar.</p>';
         }
@@ -75,11 +74,10 @@ class ASP_Search {
         $limit_title = (int) get_option( 'asp_title_limit', 50 );
         $limit_desc  = (int) get_option( 'asp_excerpt_limit', 100 );
 
-        // Configurar Query
         $args = array(
             'post_type'      => 'page',
             'post_status'    => 'publish',
-            's'              => $term, // WP_Query sí usa 's' internamente para buscar en DB
+            's'              => $term, 
             'posts_per_page' => 10,
             'post__not_in'   => $excluded_ids,
             'paged'          => get_query_var( 'paged' ) ? get_query_var( 'paged' ) : 1
@@ -94,9 +92,18 @@ class ASP_Search {
             while ( $query->have_posts() ) {
                 $query->the_post();
                 
+                // Obtenemos la URL de la imagen (medium es suficiente calidad para 100px)
                 $thumb = get_the_post_thumbnail_url( get_the_ID(), 'medium' );
-                $img_html = $thumb ? '<div class="asp-res-img" style="background-image: url('.$thumb.');"></div>' : '<div class="asp-res-img asp-no-img"></div>';
+                
+                // Si hay imagen, la ponemos como fondo. Si no, usamos un gris por defecto.
+                $style = $thumb ? 'background-image: url('.esc_url($thumb).');' : '';
+                
+                // Si no hay imagen, añadimos una clase extra 'asp-no-img' por si queremos estilizarlo diferente
+                $class_extra = $thumb ? '' : ' asp-no-img';
 
+                $img_html = '<div class="asp-res-img' . $class_extra . '" style="' . $style . '"></div>';
+
+                // Títulos y extractos
                 $title = get_the_title();
                 if ( $limit_title > 0 && mb_strlen($title) > $limit_title ) {
                     $title = mb_substr($title, 0, $limit_title) . '...';
@@ -111,7 +118,7 @@ class ASP_Search {
                 ?>
                 <div class="asp-result-item">
                     <a href="<?php the_permalink(); ?>" class="asp-result-link">
-                        <?php echo $img_html; ?>
+                        <?php echo $img_html; // Aquí se imprime la miniatura ?>
                         <div class="asp-res-content">
                             <h3><?php echo esc_html( $title ); ?></h3>
                             <p><?php echo esc_html( $excerpt ); ?></p>
@@ -123,12 +130,11 @@ class ASP_Search {
             }
             echo '</div>'; 
 
-            // Paginación personalizada para mantener el parámetro asp_query
             echo '<div class="asp-pagination">';
             echo paginate_links( array( 
                 'total' => $query->max_num_pages,
                 'format' => '?paged=%#%',
-                'add_args' => array( 'asp_query' => $term ) // Mantiene la búsqueda al cambiar página
+                'add_args' => array( 'asp_query' => $term ) 
             ));
             echo '</div>';
 
