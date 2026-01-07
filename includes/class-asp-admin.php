@@ -22,10 +22,14 @@ class ASP_Admin {
 
     public function register_settings() {
         register_setting( 'asp_settings_group', 'asp_placeholder_text' );
-        register_setting( 'asp_settings_group', 'asp_results_page_id' ); // ID de la página de resultados
-        register_setting( 'asp_settings_group', 'asp_title_limit' );     // Límite caracteres título
-        register_setting( 'asp_settings_group', 'asp_excerpt_limit' );   // Límite caracteres descripción
+        register_setting( 'asp_settings_group', 'asp_results_page_id' );
+        register_setting( 'asp_settings_group', 'asp_title_limit' );
+        register_setting( 'asp_settings_group', 'asp_excerpt_limit' );
         
+        // --- NUEVO: Configuración del Botón ---
+        register_setting( 'asp_settings_group', 'asp_btn_text' );
+        register_setting( 'asp_settings_group', 'asp_btn_color' );
+
         register_setting( 'asp_settings_group', 'asp_excluded_ids', array(
             'sanitize_callback' => array( $this, 'sanitize_excluded_ids' )
         ));
@@ -52,9 +56,23 @@ class ASP_Admin {
                             
                             <table class="form-table">
                                 <tr valign="top">
-                                    <th scope="row">Texto del Buscador</th>
+                                    <th scope="row">Placeholder (Texto fondo)</th>
                                     <td>
                                         <input type="text" name="asp_placeholder_text" value="<?php echo esc_attr( get_option('asp_placeholder_text', 'Buscar servicio aquí...') ); ?>" class="regular-text" />
+                                    </td>
+                                </tr>
+
+                                <tr valign="top">
+                                    <th scope="row">Texto del Botón</th>
+                                    <td>
+                                        <input type="text" name="asp_btn_text" value="<?php echo esc_attr( get_option('asp_btn_text', '') ); ?>" placeholder="Ej: Buscar (Déjalo vacío para usar ícono)" class="regular-text" />
+                                        <p class="description">Si escribes texto, el ícono de lupa desaparecerá.</p>
+                                    </td>
+                                </tr>
+                                <tr valign="top">
+                                    <th scope="row">Color del Botón</th>
+                                    <td>
+                                        <input type="color" name="asp_btn_color" value="<?php echo esc_attr( get_option('asp_btn_color', '#0073aa') ); ?>" />
                                     </td>
                                 </tr>
 
@@ -64,27 +82,25 @@ class ASP_Admin {
                                         <?php 
                                         wp_dropdown_pages( array(
                                             'name'              => 'asp_results_page_id',
-                                            'show_option_none'  => '&mdash; Usar búsqueda por defecto de WP &mdash;',
+                                            'show_option_none'  => '&mdash; Seleccionar página creada &mdash;',
                                             'option_none_value' => '0',
                                             'selected'          => get_option( 'asp_results_page_id', 0 )
                                         ));
                                         ?>
-                                        <p class="description">Selecciona la página donde insertaste el shortcode <code>[asp_resultados]</code>.</p>
+                                        <p class="description">Es obligatorio seleccionar la página donde pusiste el shortcode <code>[asp_resultados]</code>.</p>
                                     </td>
                                 </tr>
 
                                 <tr valign="top">
-                                    <th scope="row">Límite Caracteres Título</th>
+                                    <th scope="row">Límite Título (caracteres)</th>
                                     <td>
                                         <input type="number" name="asp_title_limit" value="<?php echo esc_attr( get_option('asp_title_limit', 50) ); ?>" class="small-text" />
-                                        <span class="description">caracteres (0 = sin límite).</span>
                                     </td>
                                 </tr>
                                 <tr valign="top">
-                                    <th scope="row">Límite Caracteres Descripción</th>
+                                    <th scope="row">Límite Descripción (caracteres)</th>
                                     <td>
                                         <input type="number" name="asp_excerpt_limit" value="<?php echo esc_attr( get_option('asp_excerpt_limit', 100) ); ?>" class="small-text" />
-                                        <span class="description">caracteres (0 = sin límite).</span>
                                     </td>
                                 </tr>
 
@@ -103,27 +119,11 @@ class ASP_Admin {
                                                 </option>
                                             <?php endforeach; ?>
                                         </select>
-                                        <p class="description">Usa Ctrl/Cmd para seleccionar varias.</p>
                                     </td>
                                 </tr>
                             </table>
                             <?php submit_button(); ?>
                         </form>
-                    </div>
-                </div>
-
-                <div style="flex: 1; min-width: 250px;">
-                    <div class="card" style="background: #f0f6fc; border-left: 4px solid #72aee6; margin-top: 20px; padding: 10px 20px;">
-                        <h3>📝 Instrucciones</h3>
-                        
-                        <h4>Paso 1: La Caja de Búsqueda</h4>
-                        <p>Pon esto donde quieras que busquen:</p>
-                        <code style="background: #fff; padding: 5px; display: block;">[buscar_paginas]</code>
-
-                        <h4>Paso 2: La Página de Resultados</h4>
-                        <p>Crea una página nueva en WordPress y pon este código dentro:</p>
-                        <code style="background: #fff; padding: 5px; display: block;">[asp_resultados]</code>
-                        <p>Luego, ve a la configuración (a la izquierda) y selecciona esa página en "Página de Resultados".</p>
                     </div>
                 </div>
             </div>
