@@ -1,3 +1,108 @@
+/* ... Estilos anteriores del buscador (asp-search-wrapper, etc) ... */
+.asp-search-wrapper { position: relative; max-width: 600px; margin: 0 auto; }
+.asp-input-group { display: flex; border: 1px solid #ddd; border-radius: 5px; overflow: hidden; }
+#asp-search-input { width: 100%; border: none; padding: 15px; font-size: 16px; outline: none; }
+.search-submit { background: #0073aa; color: white; border: none; padding: 0 20px; cursor: pointer; }
+.asp-results-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ddd; border-top: none; z-index: 1000; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: none; }
+.asp-results-dropdown ul { list-style: none; margin: 0; padding: 0; }
+.asp-results-dropdown li a { display: flex; align-items: center; padding: 10px; text-decoration: none; color: #333; border-bottom: 1px solid #f0f0f0; transition: background 0.2s; }
+.asp-results-dropdown li a:hover { background: #f9f9f9; }
+.asp-thumb { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; margin-right: 15px; background: #eee; }
+.asp-no-results { padding: 15px; color: #777; text-align: center; }
+
+/* === NUEVOS ESTILOS PARA LA PÁGINA DE RESULTADOS === */
+
+.asp-results-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.asp-result-item {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #fff;
+    transition: box-shadow 0.3s ease;
+}
+
+.asp-result-item:hover {
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.asp-result-link {
+    display: flex;
+    text-decoration: none;
+    color: inherit;
+    align-items: stretch;
+}
+
+.asp-res-img {
+    width: 200px; /* Ancho fijo para la imagen */
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    flex-shrink: 0;
+}
+
+.asp-res-img.asp-no-img {
+    background-color: #f4f4f4;
+    background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZGRkIiBzdHJva2Utd2lkdGg9IjEiPjxyZWN0IHg9IjMiIHk9IjMiIHdpZHRoPSIxOCIgaGVpZ2h0PSIxOCIgcng9IjIiIHJ5PSIyIj48L3JlY3Q+PGNpcmNsZSBjeD0iOC41IiBjeT0iOC41IiByPSIxLjUiPjwvY2lyY2xlPjxwb2x5bGluZSBwb2ludHM9IjIxIDE1IDE2IDEwIDUgMjEiPjwvcG9seWxpbmU+PC9zdmc+');
+    background-size: 50%;
+}
+
+.asp-res-content {
+    padding: 20px;
+    flex-grow: 1;
+}
+
+.asp-res-content h3 {
+    margin: 0 0 10px 0;
+    font-size: 1.25rem;
+    color: #333;
+}
+
+.asp-res-content p {
+    margin: 0 0 15px 0;
+    color: #666;
+    line-height: 1.5;
+}
+
+.asp-read-more {
+    color: #0073aa;
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
+/* Responsivo para móviles */
+@media (max-width: 600px) {
+    .asp-result-link {
+        flex-direction: column;
+    }
+    .asp-res-img {
+        width: 100%;
+        height: 150px;
+    }
+}
+
+.asp-pagination {
+    margin-top: 30px;
+    text-align: center;
+}
+.asp-pagination .page-numbers {
+    padding: 8px 12px;
+    background: #f0f0f0;
+    margin: 0 5px;
+    border-radius: 4px;
+    text-decoration: none;
+    color: #333;
+}
+.asp-pagination .page-numbers.current {
+    background: #0073aa;
+    color: #fff;
+}
+
 /* ... (Mantén los estilos del buscador superior igual que antes) ... */
 .asp-search-wrapper { position: relative; max-width: 600px; margin: 0 auto; }
 .asp-input-group { display: flex; border: 1px solid #ddd; border-radius: 5px; overflow: hidden; }
