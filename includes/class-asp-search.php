@@ -4,17 +4,25 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 class ASP_Search {
 
     public function __construct() {
+        // Shortcodes
         add_shortcode( 'buscar_paginas', array( $this, 'render_search_box' ) );
         add_shortcode( 'asp_resultados', array( $this, 'render_results_list' ) );
         
+        // Scripts y Estilos
         add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_assets' ) );
+        
+        // AJAX
         add_action( 'wp_ajax_asp_fetch_results', array( $this, 'ajax_fetch_results' ) );
         add_action( 'wp_ajax_nopriv_asp_fetch_results', array( $this, 'ajax_fetch_results' ) );
+        
+        // Estilos Sticky en el head
         add_action( 'wp_head', array( $this, 'print_sticky_styles' ) ); 
     }
 
     public function enqueue_assets() {
-        wp_enqueue_style( 'asp-style', ASP_URL . 'assets/css/style.css' );
+        // CAMBIO: Usamos time() para forzar la recarga del CSS y evitar caché
+        wp_enqueue_style( 'asp-style', ASP_URL . 'assets/css/style.css', array(), time() );
+        
         wp_enqueue_script( 'asp-script', ASP_URL . 'assets/js/search.js', array('jquery'), '1.0', true );
         wp_localize_script( 'asp-script', 'aspData', array(
             'ajaxurl' => admin_url( 'admin-ajax.php' ),
@@ -31,16 +39,16 @@ class ASP_Search {
         // Obtener la URL de la página de resultados
         $results_page_id = get_option( 'asp_results_page_id', 0 );
         
-        // Si no hay página seleccionada, avisar al admin (solo visible si admin está logueado) o usar home
+        // Validación para administrador
         if ( !$results_page_id && current_user_can('manage_options') ) {
             return '<p style="color:red; border:1px solid red; padding:5px;">Admin: Selecciona una "Página de Resultados" en la configuración del plugin.</p>';
         }
         $action_url = $results_page_id ? get_permalink( $results_page_id ) : home_url( '/' );
 
-        // Determinar contenido del botón (Texto o Lupa)
+        // Determinar contenido del botón
         $btn_content = !empty($btn_text) ? esc_html($btn_text) : '<span class="dashicons dashicons-search"></span>';
 
-        // Recuperar valor previo si existe
+        // Recuperar valor previo
         $value = isset($_GET['asp_query']) ? sanitize_text_field($_GET['asp_query']) : '';
 
         ob_start();
@@ -51,7 +59,9 @@ class ASP_Search {
                     <input type="text" id="asp-search-input" class="search-field"
                         placeholder="<?php echo esc_attr( $placeholder ); ?>"
                         value="<?php echo esc_attr( $value ); ?>" 
-                        name="asp_query" /> <button type="submit" class="search-submit" style="background-color: <?php echo esc_attr($btn_color); ?>;">
+                        name="asp_query" />
+                    
+                    <button type="submit" class="search-submit" style="background-color: <?php echo esc_attr($btn_color); ?>;">
                         <?php echo $btn_content; ?>
                     </button>
                 </div>
@@ -65,6 +75,7 @@ class ASP_Search {
 
     // --- 2. SHORTCODE: PÁGINA DE RESULTADOS ---
     public function render_results_list() {
+        // Verificamos 'asp_query'
         if ( ! isset( $_GET['asp_query'] ) || empty( $_GET['asp_query'] ) ) {
             return '<p class="asp-message">Introduce un término para buscar.</p>';
         }
@@ -77,7 +88,7 @@ class ASP_Search {
         $args = array(
             'post_type'      => 'page',
             'post_status'    => 'publish',
-            's'              => $term, 
+            's'              => $term, // WP usa 's' internamente para la query SQL
             'posts_per_page' => 10,
             'post__not_in'   => $excluded_ids,
             'paged'          => get_query_var( 'paged' ) ? get_query_var( 'paged' ) : 1
@@ -92,18 +103,19 @@ class ASP_Search {
             while ( $query->have_posts() ) {
                 $query->the_post();
                 
-                // Obtenemos la URL de la imagen (medium es suficiente calidad para 100px)
-                $thumb = get_the_post_thumbnail_url( get_the_ID(), 'medium' );
+                // 1. Obtener URL de la imagen (medium es buena calidad/peso)
+                $thumb_url = get_the_post_thumbnail_url( get_the_ID(), 'medium' );
                 
-                // Si hay imagen, la ponemos como fondo. Si no, usamos un gris por defecto.
-                $style = $thumb ? 'background-image: url('.esc_url($thumb).');' : '';
-                
-                // Si no hay imagen, añadimos una clase extra 'asp-no-img' por si queremos estilizarlo diferente
-                $class_extra = $thumb ? '' : ' asp-no-img';
+                // 2. Construir HTML de la imagen
+                if ( $thumb_url ) {
+                    // Usamos etiqueta IMG real para mejor control
+                    $img_html = '<img src="' . esc_url($thumb_url) . '" class="asp-res-img" alt="' . esc_attr(get_the_title()) . '">';
+                } else {
+                    // Placeholder si no hay imagen
+                    $img_html = '<div class="asp-res-img asp-no-img"></div>';
+                }
 
-                $img_html = '<div class="asp-res-img' . $class_extra . '" style="' . $style . '"></div>';
-
-                // Títulos y extractos
+                // Procesar textos con límites
                 $title = get_the_title();
                 if ( $limit_title > 0 && mb_strlen($title) > $limit_title ) {
                     $title = mb_substr($title, 0, $limit_title) . '...';
@@ -118,7 +130,7 @@ class ASP_Search {
                 ?>
                 <div class="asp-result-item">
                     <a href="<?php the_permalink(); ?>" class="asp-result-link">
-                        <?php echo $img_html; // Aquí se imprime la miniatura ?>
+                        <?php echo $img_html; ?>
                         <div class="asp-res-content">
                             <h3><?php echo esc_html( $title ); ?></h3>
                             <p><?php echo esc_html( $excerpt ); ?></p>
@@ -128,8 +140,9 @@ class ASP_Search {
                 </div>
                 <?php
             }
-            echo '</div>'; 
+            echo '</div>'; // Fin grid
 
+            // Paginación manteniendo el parámetro de búsqueda
             echo '<div class="asp-pagination">';
             echo paginate_links( array( 
                 'total' => $query->max_num_pages,
@@ -146,14 +159,14 @@ class ASP_Search {
         return ob_get_clean();
     }
 
-    // AJAX: Mantenemos la lógica pero aseguramos que lea 'asp_query' si fuese necesario, 
-    // aunque AJAX usa POST 'term'. No se requiere cambio en AJAX para el bug 404, 
-    // pero sí en el LOG de estadísticas para ser consistentes.
+    // --- AJAX ---
     public function ajax_fetch_results() {
         check_ajax_referer( 'asp_search_nonce', 'security' );
+        
         $term = sanitize_text_field( $_POST['term'] );
         $excluded_ids = get_option( 'asp_excluded_ids', array() );
 
+        // Log stats
         $this->log_search_stats( $term );
 
         $args = array(
@@ -171,7 +184,10 @@ class ASP_Search {
             while ( $query->have_posts() ) {
                 $query->the_post();
                 $thumb = get_the_post_thumbnail_url( get_the_ID(), 'thumbnail' );
+                
+                // SVG Placeholder en base64 para AJAX
                 $default_img = 'data:image/svg+xml;base64,' . base64_encode('<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>');
+                
                 $results[] = array(
                     'title' => get_the_title(),
                     'link'  => get_the_permalink(),
@@ -183,10 +199,12 @@ class ASP_Search {
         wp_send_json_success( $results );
     }
 
+    // --- ESTADÍSTICAS ---
     private function log_search_stats( $term ) {
         global $wpdb;
         $table_name = $wpdb->prefix . 'asp_search_stats';
         $term = strtolower( trim( $term ) );
+        
         if ( strlen( $term ) < 3 ) return; 
 
         $exists = $wpdb->get_row( $wpdb->prepare( "SELECT id, hits FROM $table_name WHERE term = %s", $term ) );
@@ -205,6 +223,7 @@ class ASP_Search {
         }
     }
 
+    // --- STICKY STYLES ---
     public function print_sticky_styles() {
         ?>
         <style>
