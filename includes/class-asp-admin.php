@@ -21,22 +21,18 @@ class ASP_Admin {
     }
 
     public function register_settings() {
-        // Texto del placeholder
         register_setting( 'asp_settings_group', 'asp_placeholder_text' );
+        register_setting( 'asp_settings_group', 'asp_results_page_id' ); // ID de la página de resultados
+        register_setting( 'asp_settings_group', 'asp_title_limit' );     // Límite caracteres título
+        register_setting( 'asp_settings_group', 'asp_excerpt_limit' );   // Límite caracteres descripción
         
-        // Exclusiones: Usamos un callback especial para guardar el array correctamente
         register_setting( 'asp_settings_group', 'asp_excluded_ids', array(
             'sanitize_callback' => array( $this, 'sanitize_excluded_ids' )
         ));
     }
 
-    /**
-     * Limpia los datos del selector múltiple antes de guardar en DB
-     */
     public function sanitize_excluded_ids( $input ) {
-        if ( ! is_array( $input ) ) {
-            return array();
-        }
+        if ( ! is_array( $input ) ) return array();
         return array_map( 'intval', $input );
     }
 
@@ -49,7 +45,7 @@ class ASP_Admin {
                 
                 <div style="flex: 2; min-width: 300px;">
                     <div class="card" style="padding: 0 20px 20px; margin-top: 20px;">
-                        <h2>Configuración General</h2>
+                        <h2>⚙️ Configuración General</h2>
                         <form method="post" action="options.php">
                             <?php settings_fields( 'asp_settings_group' ); ?>
                             <?php do_settings_sections( 'asp_settings_group' ); ?>
@@ -59,20 +55,47 @@ class ASP_Admin {
                                     <th scope="row">Texto del Buscador</th>
                                     <td>
                                         <input type="text" name="asp_placeholder_text" value="<?php echo esc_attr( get_option('asp_placeholder_text', 'Buscar servicio aquí...') ); ?>" class="regular-text" />
-                                        <p class="description">Este es el texto que aparece dentro de la caja de búsqueda antes de escribir.</p>
+                                    </td>
+                                </tr>
+
+                                <tr valign="top">
+                                    <th scope="row">Página de Resultados</th>
+                                    <td>
+                                        <?php 
+                                        wp_dropdown_pages( array(
+                                            'name'              => 'asp_results_page_id',
+                                            'show_option_none'  => '&mdash; Usar búsqueda por defecto de WP &mdash;',
+                                            'option_none_value' => '0',
+                                            'selected'          => get_option( 'asp_results_page_id', 0 )
+                                        ));
+                                        ?>
+                                        <p class="description">Selecciona la página donde insertaste el shortcode <code>[asp_resultados]</code>.</p>
+                                    </td>
+                                </tr>
+
+                                <tr valign="top">
+                                    <th scope="row">Límite Caracteres Título</th>
+                                    <td>
+                                        <input type="number" name="asp_title_limit" value="<?php echo esc_attr( get_option('asp_title_limit', 50) ); ?>" class="small-text" />
+                                        <span class="description">caracteres (0 = sin límite).</span>
                                     </td>
                                 </tr>
                                 <tr valign="top">
-                                    <th scope="row">Excluir Páginas de los Resultados</th>
+                                    <th scope="row">Límite Caracteres Descripción</th>
+                                    <td>
+                                        <input type="number" name="asp_excerpt_limit" value="<?php echo esc_attr( get_option('asp_excerpt_limit', 100) ); ?>" class="small-text" />
+                                        <span class="description">caracteres (0 = sin límite).</span>
+                                    </td>
+                                </tr>
+
+                                <tr valign="top">
+                                    <th scope="row">Excluir Páginas</th>
                                     <td>
                                         <?php 
-                                        // 1. Obtener todas las páginas publicadas
                                         $pages = get_pages( array( 'post_status' => 'publish' ) );
-                                        // 2. Obtener las ya excluidas (ahora es un array)
                                         $excluded = get_option( 'asp_excluded_ids', array() );
                                         ?>
-                                        
-                                        <select name="asp_excluded_ids[]" multiple="multiple" style="height: 200px; min-width: 300px; padding: 5px;">
+                                        <select name="asp_excluded_ids[]" multiple="multiple" style="height: 150px; min-width: 300px;">
                                             <?php foreach ( $pages as $page ) : ?>
                                                 <?php $selected = in_array( $page->ID, $excluded ) ? 'selected="selected"' : ''; ?>
                                                 <option value="<?php echo $page->ID; ?>" <?php echo $selected; ?>>
@@ -80,59 +103,29 @@ class ASP_Admin {
                                                 </option>
                                             <?php endforeach; ?>
                                         </select>
-                                        <p class="description" style="color: #d63638;">
-                                            <strong>Nota:</strong> Mantén presionada la tecla <code>Ctrl</code> (Windows) o <code>Cmd</code> (Mac) para seleccionar múltiples páginas.
-                                        </p>
+                                        <p class="description">Usa Ctrl/Cmd para seleccionar varias.</p>
                                     </td>
                                 </tr>
                             </table>
                             <?php submit_button(); ?>
                         </form>
                     </div>
-
-                    <div class="card" style="padding: 0 20px 20px; margin-top: 20px;">
-                        <h2>📊 Estadísticas de Búsqueda (Top 10)</h2>
-                        <table class="wp-list-table widefat fixed striped">
-                            <thead>
-                                <tr>
-                                    <th>Término Buscado</th>
-                                    <th>Veces Buscado</th>
-                                    <th>Última vez</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php 
-                                global $wpdb;
-                                $table_name = $wpdb->prefix . 'asp_search_stats';
-                                $results = $wpdb->get_results( "SELECT * FROM $table_name ORDER BY hits DESC LIMIT 10" );
-                                
-                                if ( $results ) {
-                                    foreach ( $results as $row ) {
-                                        echo "<tr><td>" . esc_html($row->term) . "</td><td>" . esc_html($row->hits) . "</td><td>" . esc_html($row->last_search) . "</td></tr>";
-                                    }
-                                } else {
-                                    echo "<tr><td colspan='3'>No hay datos registrados aún.</td></tr>";
-                                }
-                                ?>
-                            </tbody>
-                        </table>
-                    </div>
                 </div>
 
                 <div style="flex: 1; min-width: 250px;">
                     <div class="card" style="background: #f0f6fc; border-left: 4px solid #72aee6; margin-top: 20px; padding: 10px 20px;">
-                        <h3>📝 Instrucciones de Uso</h3>
+                        <h3>📝 Instrucciones</h3>
                         
-                        <h4>1. Insertar el Buscador</h4>
-                        <p>Copia y pega este código corto en cualquier página, entrada o widget:</p>
-                        <code style="background: #fff; padding: 5px; display: block; margin-bottom: 10px;">[buscar_paginas]</code>
-                        
-                        <h4>2. Fijar Elementos (Sticky)</h4>
-                        <p>Para que un elemento se quede fijo al hacer scroll, ve a las opciones avanzadas del bloque (en Gutenberg) y añade esta clase en "Clase CSS adicional":</p>
-                        <code style="background: #fff; padding: 5px; display: block;">bloque-flotante</code>
+                        <h4>Paso 1: La Caja de Búsqueda</h4>
+                        <p>Pon esto donde quieras que busquen:</p>
+                        <code style="background: #fff; padding: 5px; display: block;">[buscar_paginas]</code>
+
+                        <h4>Paso 2: La Página de Resultados</h4>
+                        <p>Crea una página nueva en WordPress y pon este código dentro:</p>
+                        <code style="background: #fff; padding: 5px; display: block;">[asp_resultados]</code>
+                        <p>Luego, ve a la configuración (a la izquierda) y selecciona esa página en "Página de Resultados".</p>
                     </div>
                 </div>
-
             </div>
         </div>
         <?php
